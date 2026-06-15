@@ -1,24 +1,38 @@
 # Claude Code Usage — Stream Deck + Plugin
 
-Displays your Claude Code usage limits on the LCD strip of a Stream Deck + encoder dial. Shows session (5-hour) and weekly (7-day) utilisation at a glance, with a colour-coded progress bar and reset countdown.
+Displays your Claude Code usage limits directly on your Stream Deck. Two action types are included — one for the **LCD strip** on the Stream Deck +, and one for any standard **key** button.
+
+**Dial action (Stream Deck + LCD strip)**
 
 ![Claude Code Usage on Stream Deck + LCD strip](docs/screenshot.png)
+
+**Key action (standard button, any Stream Deck)**
+
+![Claude Code Usage key action](docs/screenshot-key.png)
 
 ## Features
 
 - **Session view**: current 5-hour usage % (large), weekly % in subtitle, time until reset
 - **Weekly view**: current 7-day usage % (large), session % in subtitle, time until reset
-- **Rotate dial** to toggle between session and weekly views
-- **Press dial** to force an immediate refresh
-- **Tap touchscreen** to toggle views
+- **Dial action** — rotate to toggle views, press to refresh, tap touchscreen to toggle
+- **Key action** — press to toggle between session and weekly view
 - Auto-refreshes every **30 seconds**
 - Colour-coded bar: green < 70%, orange 70–89%, red ≥ 90%
 - Works on **Windows** and **macOS**
 
+## Compatibility
+
+| Action | Works on |
+|---|---|
+| **Claude Usage (Key)** | All Stream Deck models |
+| **Claude Usage (Dial)** | Stream Deck + only (requires the LCD strip and encoder dials) |
+
 ## Requirements
 
-- [Stream Deck +](https://www.elgato.com/stream-deck-plus) (the model with the LCD strip and encoder dials)
 - Stream Deck software ≥ 6.4
+- [Node.js](https://nodejs.org/) ≥ 20 (for building only)
+- [Claude Code](https://claude.ai/code) installed and logged in (`~/.claude/.credentials.json` must exist)
+- `curl` — ships with macOS and Windows 10+
 - [Node.js](https://nodejs.org/) ≥ 20 (for building only)
 - [Claude Code](https://claude.ai/code) installed and logged in (`~/.claude/.credentials.json` must exist)
 - `curl` — ships with macOS and Windows 10+
@@ -36,7 +50,10 @@ npm run build
 npm run install-plugin
 ```
 
-Then restart the Stream Deck app and drag **Claude Usage** from the action list onto an encoder dial.
+Then restart the Stream Deck app. Two actions will appear in the action list under **Developer Tools**:
+
+- **Claude Usage (Dial)** — drag onto an encoder slot on the Stream Deck +
+- **Claude Usage (Key)** — drag onto any button on any Stream Deck model
 
 > **Note:** The plugin reads credentials from `~/.claude/.credentials.json`, which is created automatically when you log in to Claude Code. If the credentials expire, open Claude Code once to refresh them.
 
@@ -62,7 +79,7 @@ Logs are written to:
 1. On startup, reads `~/.claude/.credentials.json` for your OAuth access token.
 2. Calls `https://claude.ai/api/oauth/usage` via system `curl` (avoids embedded Node.js DNS/TLS issues with Cloudflare).
 3. Parses `five_hour.utilization` and `seven_day.utilization` (0–100 scale) and `resets_at` (ISO timestamp).
-4. Renders the result to the LCD strip via `setFeedback()` with a custom layout.
+4. Renders the result via `setFeedback()` (dial LCD strip) or `setImage()` with an inline SVG (key button).
 
 ## Project structure
 
@@ -71,7 +88,8 @@ ClaudeCodeUsagePlugin/
 ├── src/
 │   ├── plugin.ts                  # Entry point
 │   └── actions/
-│       └── usage-dial.ts          # Dial action (rotate, press, tap)
+│       ├── usage-dial.ts          # Dial action (rotate, press, tap)
+│       └── usage-key.ts           # Key action (press to toggle view)
 │   └── services/
 │       ├── claude-api.ts          # Usage API fetch + formatting
 │       └── credentials.ts         # Read ~/.claude/.credentials.json

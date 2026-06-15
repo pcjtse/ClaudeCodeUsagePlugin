@@ -1,0 +1,16 @@
+2026-06-15T09:39:34.721Z ERROR Process encountered uncaught exception 
+file:///C:/Users/pcjts/StreamDeckPlugins/ClaudeCodeUsagePlugin/node_modules/@elgato/streamdeck/dist/index.js:1417
+        throw new Error("Failed to read manifest.json as the file does not exist.");
+              ^
+
+Error: Failed to read manifest.json as the file does not exist.
+    at readManifest (file:///C:/Users/pcjts/StreamDeckPlugins/ClaudeCodeUsagePlugin/node_modules/@elgato/streamdeck/dist/index.js:1417:15)
+    at getManifest (file:///C:/Users/pcjts/StreamDeckPlugins/ClaudeCodeUsagePlugin/node_modules/@elgato/streamdeck/dist/index.js:1408:28)
+    at get manifest (file:///C:/Users/pcjts/StreamDeckPlugins/ClaudeCodeUsagePlugin/node_modules/@elgato/streamdeck/dist/index.js:3110:16)
+    at file:///C:/Users/pcjts/StreamDeckPlugins/ClaudeCodeUsagePlugin/node_modules/@elgato/streamdeck/dist/index.js:3152:16
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:543:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:350:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1673:24)
+    at Module._compile (node:internal/modules/cjs/loader:1836:5)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)

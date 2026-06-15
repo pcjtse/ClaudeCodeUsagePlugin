@@ -19,7 +19,7 @@
   "Actions": [
     {
       "UUID": "com.pcjtse.claudeusage.usage",
-      "Name": "Claude Usage",
+      "Name": "Claude Usage (Dial)",
       "Icon": "imgs/action-icon",
       "Controllers": ["Encoder"],
       "Encoder": {
@@ -31,6 +31,15 @@
           "LongTouch": "Refresh usage data"
         }
       },
+      "States": [
+        { "Image": "imgs/action-icon" }
+      ]
+    },
+    {
+      "UUID": "com.pcjtse.claudeusage.key",
+      "Name": "Claude Usage (Key)",
+      "Icon": "imgs/action-icon",
+      "Controllers": ["Keypad"],
       "States": [
         { "Image": "imgs/action-icon" }
       ]
