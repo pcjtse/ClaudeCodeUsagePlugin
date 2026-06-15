@@ -1,0 +1,5 @@
+node_modules/
+com.pcjtse.claudeusage.sdPlugin/bin/
+*.js.map
+.env
+.claude/

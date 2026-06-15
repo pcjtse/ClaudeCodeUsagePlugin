@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.pcjtse.claudeusage",
+  "Name": "Claude Code Usage",
+  "Author": "pcjtse",
+  "Description": "Monitor Claude Code session (5h) and weekly (7d) usage limits on the Stream Deck + LCD strip. Rotate the dial to switch between session and weekly views.",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "CodePath": "bin/plugin.js",
+  "Icon": "imgs/plugin-icon",
+  "Category": "Developer Tools",
+  "CategoryIcon": "imgs/plugin-icon",
+  "OS": [
+    { "Platform": "windows", "MinimumVersion": "10" },
+    { "Platform": "mac", "MinimumVersion": "10.15" }
+  ],
+  "Software": { "MinimumVersion": "6.4" },
+  "Nodejs": { "Version": "20" },
+  "Actions": [
+    {
+      "UUID": "com.pcjtse.claudeusage.usage",
+      "Name": "Claude Usage",
+      "Icon": "imgs/action-icon",
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "layouts/usage-layout.json",
+        "TriggerDescription": {
+          "Rotate": "Switch between session and weekly view",
+          "Push": "Refresh usage data",
+          "Touch": "Switch view",
+          "LongTouch": "Refresh usage data"
+        }
+      },
+      "States": [
+        { "Image": "imgs/action-icon" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "claude-code-usage-plugin",
+  "version": "1.0.0",
+  "description": "Stream Deck + plugin showing Claude Code session and weekly usage limits",
+  "scripts": {
+    "build": "rollup -c --bundleConfigAsCjs",
+    "watch": "rollup -c --bundleConfigAsCjs --watch",
+    "install-plugin": "node scripts/install-plugin.mjs"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^1.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "@types/node": "^25.9.3",
+    "rollup": "^4.0.0",
+    "tslib": "^2.6.0",
+    "typescript": "^5.0.0"
+  }
+}

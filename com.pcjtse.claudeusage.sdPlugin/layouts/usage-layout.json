@@ -1,0 +1,32 @@
+{
+  "id": "com.pcjtse.claudeusage.layout",
+  "items": [
+    {
+      "key": "title",
+      "type": "text",
+      "rect": [0, 4, 200, 18],
+      "font": { "size": 12, "weight": 600 },
+      "alignment": "center"
+    },
+    {
+      "key": "value",
+      "type": "text",
+      "rect": [0, 24, 200, 38],
+      "font": { "size": 30, "weight": 700 },
+      "alignment": "center"
+    },
+    {
+      "key": "bar",
+      "type": "bar",
+      "rect": [8, 66, 184, 10],
+      "subtype": 1
+    },
+    {
+      "key": "subtitle",
+      "type": "text",
+      "rect": [0, 80, 200, 16],
+      "font": { "size": 11 },
+      "alignment": "center"
+    }
+  ]
+}
