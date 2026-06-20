@@ -43,6 +43,33 @@
       "States": [
         { "Image": "imgs/action-icon" }
       ]
+    },
+    {
+      "UUID": "com.pcjtse.claudeusage.reset",
+      "Name": "Claude Reset Timer (Key)",
+      "Icon": "imgs/action-icon",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "imgs/action-icon" }
+      ]
+    },
+    {
+      "UUID": "com.pcjtse.claudeusage.resetdial",
+      "Name": "Claude Reset Timer (Dial)",
+      "Icon": "imgs/action-icon",
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "layouts/usage-layout.json",
+        "TriggerDescription": {
+          "Rotate": "Switch between session and weekly reset timer",
+          "Push": "Refresh",
+          "Touch": "Switch view",
+          "LongTouch": "Refresh"
+        }
+      },
+      "States": [
+        { "Image": "imgs/action-icon" }
+      ]
     }
   ]
 }
