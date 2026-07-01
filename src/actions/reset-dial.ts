@@ -6,14 +6,19 @@ import streamDeck, {
   DialDownEvent,
   TouchTapEvent,
   DialAction,
+  DidReceiveSettingsEvent,
   type JsonObject,
 } from "@elgato/streamdeck";
 import { fetchUsage, UsageDisplay } from "../services/claude-api.js";
+import { fetchMinimaxUsage } from "../services/minimax-api.js";
 
 type Mode = "session" | "weekly";
+type Provider = "claudecode" | "minimax";
 
 interface ResetDialSettings extends JsonObject {
-  mode?: "session" | "weekly";
+  mode?: Mode;
+  provider?: Provider;
+  minimaxApiKey?: string;
 }
 
 function timeComponents(resetsAt: Date): { days: number; hours: number; minutes: number; totalSeconds: number } {
@@ -42,28 +47,51 @@ function timeBarColor(totalSeconds: number, isSession: boolean): string {
 @action({ UUID: "com.pcjtse.claudeusage.resetdial" })
 export class ResetDial extends SingletonAction<ResetDialSettings> {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private cached: UsageDisplay | null = null;
-  private lastError: string | null = null;
+  private cachedClaude: UsageDisplay | null = null;
+  private cachedMinimax: UsageDisplay | null = null;
+  private claudeError: string | null = null;
+  private minimaxError: string | null = null;
+  private settingsCache = new Map<string, ResetDialSettings>();
 
   override async onWillAppear(ev: WillAppearEvent<ResetDialSettings>): Promise<void> {
     if (!ev.action.isDial()) return;
+
+    const s = ev.payload.settings.mode
+      ? ev.payload.settings
+      : { ...ev.payload.settings, mode: "session" as Mode };
+
     if (!ev.payload.settings.mode) {
-      await ev.action.setSettings({ mode: "session" });
+      await ev.action.setSettings(s);
     }
+    this.settingsCache.set(ev.action.id, s);
+
     if (!this.pollTimer) {
       await this.refresh();
       this.pollTimer = setInterval(() => void this.refresh(), 30_000);
     } else {
-      await this.renderDial(ev.action, ev.payload.settings.mode ?? "session");
+      const { cached, error } = this.providerData(s.provider);
+      await this.renderDial(ev.action, s.mode ?? "session", cached, error);
     }
+  }
+
+  override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<ResetDialSettings>): Promise<void> {
+    if (!ev.action.isDial()) return;
+    const s = ev.payload.settings;
+    this.settingsCache.set(ev.action.id, s);
+    const { cached, error } = this.providerData(s.provider);
+    await this.renderDial(ev.action, s.mode ?? "session", cached, error);
+    void this.refresh();
   }
 
   override async onDialRotate(ev: DialRotateEvent<ResetDialSettings>): Promise<void> {
     if (!ev.action.isDial()) return;
-    const current = ev.payload.settings.mode ?? "session";
-    const next: Mode = current === "session" ? "weekly" : "session";
-    await ev.action.setSettings({ mode: next });
-    await this.renderDial(ev.action, next);
+    const s = this.settingsCache.get(ev.action.id) ?? ev.payload.settings;
+    const next: Mode = (s.mode ?? "session") === "session" ? "weekly" : "session";
+    const updated = { ...s, mode: next };
+    this.settingsCache.set(ev.action.id, updated);
+    await ev.action.setSettings(updated);
+    const { cached, error } = this.providerData(s.provider);
+    await this.renderDial(ev.action, next, cached, error);
   }
 
   override async onDialDown(_ev: DialDownEvent<ResetDialSettings>): Promise<void> {
@@ -72,34 +100,56 @@ export class ResetDial extends SingletonAction<ResetDialSettings> {
 
   override async onTouchTap(ev: TouchTapEvent<ResetDialSettings>): Promise<void> {
     if (!ev.action.isDial()) return;
-    const current = ev.payload.settings.mode ?? "session";
-    const next: Mode = current === "session" ? "weekly" : "session";
-    await ev.action.setSettings({ mode: next });
-    await this.renderDial(ev.action, next);
+    const s = this.settingsCache.get(ev.action.id) ?? ev.payload.settings;
+    const next: Mode = (s.mode ?? "session") === "session" ? "weekly" : "session";
+    const updated = { ...s, mode: next };
+    this.settingsCache.set(ev.action.id, updated);
+    await ev.action.setSettings(updated);
+    const { cached, error } = this.providerData(s.provider);
+    await this.renderDial(ev.action, next, cached, error);
+  }
+
+  private providerData(provider: Provider | undefined): { cached: UsageDisplay | null; error: string | null } {
+    if (provider === "minimax") return { cached: this.cachedMinimax, error: this.minimaxError };
+    return { cached: this.cachedClaude, error: this.claudeError };
   }
 
   private async refresh(): Promise<void> {
-    try {
-      this.cached = await fetchUsage();
-      this.lastError = null;
-    } catch (err) {
-      this.lastError = err instanceof Error ? err.message : String(err);
-      streamDeck.logger.error(`[ClaudeUsage ResetDial] ${this.lastError}`);
+    let needsClaude = false;
+    let minimaxKey: string | undefined;
+
+    for (const s of this.settingsCache.values()) {
+      if (s.provider === "minimax") {
+        minimaxKey = s.minimaxApiKey;
+      } else {
+        needsClaude = true;
+      }
     }
+    if (this.settingsCache.size === 0) needsClaude = true;
+
+    if (needsClaude) {
+      try { this.cachedClaude = await fetchUsage(); this.claudeError = null; }
+      catch (err) { this.claudeError = err instanceof Error ? err.message : String(err); streamDeck.logger.error(`[ResetDial] claude: ${this.claudeError}`); }
+    }
+    if (minimaxKey) {
+      try { this.cachedMinimax = await fetchMinimaxUsage(minimaxKey); this.minimaxError = null; }
+      catch (err) { this.minimaxError = err instanceof Error ? err.message : String(err); streamDeck.logger.error(`[ResetDial] minimax: ${this.minimaxError}`); }
+    }
+
     await this.renderAll();
   }
 
   private async renderAll(): Promise<void> {
     for (const act of this.actions) {
-      if (act.isDial()) {
-        const settings = await act.getSettings<ResetDialSettings>();
-        await this.renderDial(act, settings.mode ?? "session");
-      }
+      if (!act.isDial()) continue;
+      const s = this.settingsCache.get(act.id) ?? {};
+      const { cached, error } = this.providerData((s as ResetDialSettings).provider);
+      await this.renderDial(act, (s as ResetDialSettings).mode ?? "session", cached, error);
     }
   }
 
-  private async renderDial(act: DialAction<ResetDialSettings>, mode: Mode): Promise<void> {
-    if (this.lastError) {
+  private async renderDial(act: DialAction<ResetDialSettings>, mode: Mode, cached: UsageDisplay | null, error: string | null): Promise<void> {
+    if (error) {
       await act.setFeedback({
         title: mode === "session" ? "5h Reset" : "7d Reset",
         value: "—",
@@ -109,7 +159,7 @@ export class ResetDial extends SingletonAction<ResetDialSettings> {
       return;
     }
 
-    if (!this.cached) {
+    if (!cached) {
       await act.setFeedback({
         title: mode === "session" ? "5h Reset" : "7d Reset",
         value: "...",
@@ -120,8 +170,8 @@ export class ResetDial extends SingletonAction<ResetDialSettings> {
     }
 
     if (mode === "session") {
-      const sess = this.cached.session;
-      const week = this.cached.weekly;
+      const sess = cached.session;
+      const week = cached.weekly;
       if (!sess) {
         await act.setFeedback({
           title: "5h Reset",
@@ -142,8 +192,8 @@ export class ResetDial extends SingletonAction<ResetDialSettings> {
         subtitle: `Time left${weekSuffix}`,
       });
     } else {
-      const week = this.cached.weekly;
-      const sess = this.cached.session;
+      const week = cached.weekly;
+      const sess = cached.session;
       if (!week) {
         await act.setFeedback({
           title: "7d Reset",

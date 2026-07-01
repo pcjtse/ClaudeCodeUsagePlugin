@@ -28,7 +28,7 @@ export interface UsageDisplay {
   weeklySonnet: LimitDisplay | null;
 }
 
-function formatTimeLeft(date: Date): string {
+export function formatTimeLeft(date: Date): string {
   const diffMs = date.getTime() - Date.now();
   if (diffMs <= 0) return "now";
   const s = Math.floor(diffMs / 1000);

@@ -21,6 +21,7 @@
       "UUID": "com.pcjtse.claudeusage.usage",
       "Name": "Claude Usage (Dial)",
       "Icon": "imgs/action-icon",
+      "PropertyInspectorPath": "ui/pi.html",
       "Controllers": ["Encoder"],
       "Encoder": {
         "layout": "layouts/usage-layout.json",
@@ -39,6 +40,7 @@
       "UUID": "com.pcjtse.claudeusage.key",
       "Name": "Claude Usage (Key)",
       "Icon": "imgs/action-icon",
+      "PropertyInspectorPath": "ui/pi.html",
       "Controllers": ["Keypad"],
       "States": [
         { "Image": "imgs/action-icon" }
@@ -48,6 +50,7 @@
       "UUID": "com.pcjtse.claudeusage.reset",
       "Name": "Claude Reset Timer (Key)",
       "Icon": "imgs/action-icon",
+      "PropertyInspectorPath": "ui/pi.html",
       "Controllers": ["Keypad"],
       "States": [
         { "Image": "imgs/action-icon" }
@@ -57,6 +60,7 @@
       "UUID": "com.pcjtse.claudeusage.resetdial",
       "Name": "Claude Reset Timer (Dial)",
       "Icon": "imgs/action-icon",
+      "PropertyInspectorPath": "ui/pi.html",
       "Controllers": ["Encoder"],
       "Encoder": {
         "layout": "layouts/usage-layout.json",

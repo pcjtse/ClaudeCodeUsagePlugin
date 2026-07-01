@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1e1e1e;
+      color: #d0d0d0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      padding: 10px 12px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .row label {
+      width: 76px;
+      flex-shrink: 0;
+      color: #8e8e93;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .row select,
+    .row input[type="password"],
+    .row input[type="text"] {
+      flex: 1;
+      background: #2c2c2e;
+      border: 1px solid #3a3a3c;
+      border-radius: 4px;
+      color: #d0d0d0;
+      padding: 5px 8px;
+      font-size: 12px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .row select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238e8e93'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+    .row select:focus,
+    .row input:focus {
+      border-color: #0a84ff;
+    }
+    .hint {
+      font-size: 10px;
+      color: #636366;
+      margin-top: 2px;
+      padding-left: 84px;
+      line-height: 1.4;
+    }
+    .separator {
+      border: none;
+      border-top: 1px solid #2c2c2e;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <label>Provider</label>
+    <select id="provider">
+      <option value="claudecode">Claude Code</option>
+      <option value="minimax">Minimax</option>
+    </select>
+  </div>
+
+  <div id="sectionMinimax" style="display:none">
+    <hr class="separator"/>
+    <div class="row">
+      <label>API Key</label>
+      <input type="password" id="minimaxApiKey" placeholder="Enter Minimax API key"/>
+    </div>
+    <div class="hint">Bearer token for api.minimax.io — stored per button in Stream Deck settings.</div>
+  </div>
+
+  <div id="sectionClaude" style="display:block">
+    <hr class="separator"/>
+    <div class="hint">Reads from ~/.claude/.credentials.json (auto-refreshed by Claude Code).</div>
+  </div>
+
+  <script>
+    var ws = null;
+    var actionCtx = null;
+    var currentSettings = {};
+
+    function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info) {
+      actionCtx = uuid;
+      ws = new WebSocket("ws://127.0.0.1:" + port);
+
+      ws.onopen = function () {
+        ws.send(JSON.stringify({ event: registerEvent, uuid: uuid }));
+        ws.send(JSON.stringify({ event: "getSettings", context: uuid }));
+      };
+
+      ws.onmessage = function (evt) {
+        try {
+          var msg = JSON.parse(evt.data);
+          if (msg.event === "didReceiveSettings") {
+            currentSettings = msg.payload.settings || {};
+            applyUI(currentSettings);
+          }
+        } catch (e) { /* ignore */ }
+      };
+    }
+
+    function applyUI(s) {
+      var prov = s.provider || "claudecode";
+      document.getElementById("provider").value = prov;
+      document.getElementById("minimaxApiKey").value = s.minimaxApiKey || "";
+      var isMM = prov === "minimax";
+      document.getElementById("sectionMinimax").style.display = isMM ? "block" : "none";
+      document.getElementById("sectionClaude").style.display = isMM ? "none" : "block";
+    }
+
+    function save() {
+      var merged = Object.assign({}, currentSettings, {
+        provider: document.getElementById("provider").value,
+        minimaxApiKey: document.getElementById("minimaxApiKey").value
+      });
+      currentSettings = merged;
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ event: "setSettings", context: actionCtx, payload: merged }));
+      }
+      applyUI(merged);
+    }
+
+    document.getElementById("provider").addEventListener("change", save);
+    document.getElementById("minimaxApiKey").addEventListener("change", save);
+  </script>
+</body>
+</html>

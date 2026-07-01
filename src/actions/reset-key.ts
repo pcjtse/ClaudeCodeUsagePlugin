@@ -4,14 +4,19 @@ import streamDeck, {
   WillAppearEvent,
   KeyDownEvent,
   KeyAction,
+  DidReceiveSettingsEvent,
   type JsonObject,
 } from "@elgato/streamdeck";
 import { fetchUsage, UsageDisplay } from "../services/claude-api.js";
+import { fetchMinimaxUsage } from "../services/minimax-api.js";
 
 type Mode = "session" | "weekly";
+type Provider = "claudecode" | "minimax";
 
 interface ResetSettings extends JsonObject {
-  mode?: "session" | "weekly";
+  mode?: Mode;
+  provider?: Provider;
+  minimaxApiKey?: string;
 }
 
 function timeComponents(resetsAt: Date): { days: number; hours: number; minutes: number; totalSeconds: number } {
@@ -66,52 +71,94 @@ function buildResetImage(mode: Mode, cached: UsageDisplay | null, error: string 
 @action({ UUID: "com.pcjtse.claudeusage.reset" })
 export class ResetKey extends SingletonAction<ResetSettings> {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
-  private cached: UsageDisplay | null = null;
-  private lastError: string | null = null;
+  private cachedClaude: UsageDisplay | null = null;
+  private cachedMinimax: UsageDisplay | null = null;
+  private claudeError: string | null = null;
+  private minimaxError: string | null = null;
+  private settingsCache = new Map<string, ResetSettings>();
 
   override async onWillAppear(ev: WillAppearEvent<ResetSettings>): Promise<void> {
     if (!ev.action.isKey()) return;
+
+    const s = ev.payload.settings.mode
+      ? ev.payload.settings
+      : { ...ev.payload.settings, mode: "session" as Mode };
+
     if (!ev.payload.settings.mode) {
-      await ev.action.setSettings({ mode: "session" });
+      await ev.action.setSettings(s);
     }
+    this.settingsCache.set(ev.action.id, s);
+
     if (!this.pollTimer) {
       await this.refresh();
       this.pollTimer = setInterval(() => void this.refresh(), 30_000);
     } else {
-      await this.renderKey(ev.action, ev.payload.settings.mode ?? "session");
+      const { cached, error } = this.providerData(s.provider);
+      await this.renderKey(ev.action, s.mode ?? "session", cached, error);
     }
+  }
+
+  override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<ResetSettings>): Promise<void> {
+    if (!ev.action.isKey()) return;
+    const s = ev.payload.settings;
+    this.settingsCache.set(ev.action.id, s);
+    const { cached, error } = this.providerData(s.provider);
+    await this.renderKey(ev.action, s.mode ?? "session", cached, error);
+    void this.refresh();
   }
 
   override async onKeyDown(ev: KeyDownEvent<ResetSettings>): Promise<void> {
-    const current = ev.payload.settings.mode ?? "session";
-    const next: Mode = current === "session" ? "weekly" : "session";
-    await ev.action.setSettings({ mode: next });
-    await this.renderKey(ev.action, next);
+    const s = this.settingsCache.get(ev.action.id) ?? ev.payload.settings;
+    const next: Mode = (s.mode ?? "session") === "session" ? "weekly" : "session";
+    const updated = { ...s, mode: next };
+    this.settingsCache.set(ev.action.id, updated);
+    await ev.action.setSettings(updated);
+    const { cached, error } = this.providerData(s.provider);
+    await this.renderKey(ev.action, next, cached, error);
+  }
+
+  private providerData(provider: Provider | undefined): { cached: UsageDisplay | null; error: string | null } {
+    if (provider === "minimax") return { cached: this.cachedMinimax, error: this.minimaxError };
+    return { cached: this.cachedClaude, error: this.claudeError };
   }
 
   private async refresh(): Promise<void> {
-    try {
-      this.cached = await fetchUsage();
-      this.lastError = null;
-    } catch (err) {
-      this.lastError = err instanceof Error ? err.message : String(err);
-      streamDeck.logger.error(`[ClaudeUsage Reset] ${this.lastError}`);
+    let needsClaude = false;
+    let minimaxKey: string | undefined;
+
+    for (const s of this.settingsCache.values()) {
+      if (s.provider === "minimax") {
+        minimaxKey = s.minimaxApiKey;
+      } else {
+        needsClaude = true;
+      }
     }
+    if (this.settingsCache.size === 0) needsClaude = true;
+
+    if (needsClaude) {
+      try { this.cachedClaude = await fetchUsage(); this.claudeError = null; }
+      catch (err) { this.claudeError = err instanceof Error ? err.message : String(err); streamDeck.logger.error(`[ResetKey] claude: ${this.claudeError}`); }
+    }
+    if (minimaxKey) {
+      try { this.cachedMinimax = await fetchMinimaxUsage(minimaxKey); this.minimaxError = null; }
+      catch (err) { this.minimaxError = err instanceof Error ? err.message : String(err); streamDeck.logger.error(`[ResetKey] minimax: ${this.minimaxError}`); }
+    }
+
     await this.renderAll();
   }
 
   private async renderAll(): Promise<void> {
     for (const act of this.actions) {
-      if (act.isKey()) {
-        const settings = await act.getSettings<ResetSettings>();
-        await this.renderKey(act, settings.mode ?? "session");
-      }
+      if (!act.isKey()) continue;
+      const s = this.settingsCache.get(act.id) ?? {};
+      const { cached, error } = this.providerData((s as ResetSettings).provider);
+      await this.renderKey(act, (s as ResetSettings).mode ?? "session", cached, error);
     }
   }
 
-  private async renderKey(act: KeyAction<ResetSettings>, mode: Mode): Promise<void> {
+  private async renderKey(act: KeyAction<ResetSettings>, mode: Mode, cached: UsageDisplay | null, error: string | null): Promise<void> {
     try {
-      await act.setImage(buildResetImage(mode, this.cached, this.lastError));
+      await act.setImage(buildResetImage(mode, cached, error));
     } catch (err) {
       streamDeck.logger.error(`[ClaudeUsage Reset] setImage error: ${err}`);
     }
