@@ -16,7 +16,7 @@ Displays your Claude Code usage limits directly on your Stream Deck. Two action 
 - **Weekly view**: current 7-day usage % (large), session % in subtitle, time until reset
 - **Dial action** — rotate to toggle views, press to refresh, tap touchscreen to toggle
 - **Key action** — press to toggle between session and weekly view
-- Auto-refreshes every **30 seconds**
+- Redraws every 30 seconds; fetches from the API at most every **5 minutes** (the usage endpoint rate-limits), backing off up to 30 minutes if rate-limited
 - Colour-coded bar: green < 70%, orange 70–89%, red ≥ 90%
 - Works on **Windows** and **macOS**
 
@@ -31,10 +31,10 @@ Displays your Claude Code usage limits directly on your Stream Deck. Two action 
 
 - Stream Deck software ≥ 6.4
 - [Node.js](https://nodejs.org/) ≥ 20 (for building only)
-- [Claude Code](https://claude.ai/code) installed and logged in (`~/.claude/.credentials.json` must exist)
+- [Claude Code](https://claude.ai/code) installed and logged in
 - `curl` — ships with macOS and Windows 10+
 - [Node.js](https://nodejs.org/) ≥ 20 (for building only)
-- [Claude Code](https://claude.ai/code) installed and logged in (`~/.claude/.credentials.json` must exist)
+- [Claude Code](https://claude.ai/code) installed and logged in
 - `curl` — ships with macOS and Windows 10+
 
 ## Setup
@@ -55,7 +55,7 @@ Then restart the Stream Deck app. Two actions will appear in the action list und
 - **Claude Usage (Dial)** — drag onto an encoder slot on the Stream Deck +
 - **Claude Usage (Key)** — drag onto any button on any Stream Deck model
 
-> **Note:** The plugin reads credentials from `~/.claude/.credentials.json`, which is created automatically when you log in to Claude Code. If the credentials expire, open Claude Code once to refresh them.
+> **Note:** The plugin reads the credentials Claude Code saves when you log in — the Keychain item `Claude Code-credentials` on macOS (macOS may ask once to allow access), or `~/.claude/.credentials.json` on Windows. If the credentials expire, open Claude Code once to refresh them.
 
 ## Development
 
@@ -76,8 +76,8 @@ Logs are written to:
 
 ## How it works
 
-1. On startup, reads `~/.claude/.credentials.json` for your OAuth access token.
-2. Calls `https://claude.ai/api/oauth/usage` via system `curl` (avoids embedded Node.js DNS/TLS issues with Cloudflare).
+1. Reads your Claude Code OAuth access token — from the macOS Keychain (`Claude Code-credentials`) on macOS, falling back to `~/.claude/.credentials.json` (used on Windows/Linux).
+2. Calls `https://api.anthropic.com/api/oauth/usage` via system `curl` (avoids embedded Node.js DNS/TLS issues with Cloudflare).
 3. Parses `five_hour.utilization` and `seven_day.utilization` (0–100 scale) and `resets_at` (ISO timestamp).
 4. Renders the result via `setFeedback()` (dial LCD strip) or `setImage()` with an inline SVG (key button).
 

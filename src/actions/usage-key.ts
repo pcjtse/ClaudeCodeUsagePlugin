@@ -34,7 +34,7 @@ function buildKeyImage(view: View, cached: UsageDisplay | null, error: string | 
 
   if (error) {
     pctText = "ERR";
-    subtitle = "check creds";
+    subtitle = error.startsWith("Rate limited") ? "rate limited" : "check creds";
     color = "#FF3B30";
   } else if (!cached) {
     pctText = "...";

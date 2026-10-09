@@ -45,7 +45,7 @@ function buildSvg(title: string, primary: string, secondary: string, fraction: n
 
 function buildResetImage(mode: Mode, cached: UsageDisplay | null, error: string | null): string {
   if (error) {
-    return buildSvg(mode === "session" ? "5h Reset" : "7d Reset", "ERR", "check creds", 0, "#FF3B30");
+    return buildSvg(mode === "session" ? "5h Reset" : "7d Reset", "ERR", error.startsWith("Rate limited") ? "rate limited" : "check creds", 0, "#FF3B30");
   }
   if (!cached) {
     return buildSvg(mode === "session" ? "5h Reset" : "7d Reset", "...", "loading", 0, "#48484A");
