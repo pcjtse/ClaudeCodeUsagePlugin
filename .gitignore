@@ -4,3 +4,15 @@ com.pcjtse.claudeusage.sdPlugin/bin/
 .env
 .claude/
 CLAUDE.md
+
+# Secrets, local agent files and build output
+.env.*
+*.pem
+*.key
+*.p12
+.DS_Store
+.idea/
+.vscode/
+dist/
+npm-debug.log*
+!.env.example
